@@ -313,7 +313,7 @@ def CalculateThreshold():
                 IsNewFrame = False
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            ret, frameThresh = cv2.threshold(frame_gray, thresholdValue, 255, cv2.THRESH_BINARY);
+            _, frameThresh = cv2.threshold(frame_gray, thresholdValue, 255, cv2.THRESH_BINARY)
 
             IsNewFrameThreshold = True
             if (IsShowThreshold):
@@ -387,6 +387,37 @@ def AddIterationsPerSecText(frame, iterations_per_sec):
         (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
     return frame
 
+class ThreadedCamera(object):
+    def __init__(self, src=0):
+        self.capture = cv2.VideoCapture(src)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+
+        # FPS = 1/X
+        # X = desired FPS
+        self.FPS = 1/DesiredFps
+        self.FPS_MS = int(self.FPS * 1000)
+        
+        # Start frame retrieval thread
+        self.thread = Thread(target=self.update, args=())
+        self.thread.daemon = True
+        self.thread.start()
+
+    def update(self):
+        while True:
+            if self.capture.isOpened():
+                (self.status, self.frame) = self.capture.read()
+            time.sleep(self.FPS)
+
+    def show_frame(self):
+        cv2.imshow('frame', self.frame)
+        cv2.waitKey(self.FPS_MS)
+
+    def get_frame(self):
+        try:
+            return True, self.frame;
+        except AttributeError:
+            return False, None
+
 timeLastPrintedFps = datetime.datetime.now()
 
 inputFrameCount = 0
@@ -415,12 +446,11 @@ ProcessDataThread.daemon = True
 ProcessDataThread.start()
 
 # Set OpenCV video capture source
-videoCapture = cv2.VideoCapture(videoSource)
+threaded_camera = ThreadedCamera(videoSource)
 
 # Main Loop
 while True:
-    # Get most recent frame
-    ret, localFrame = videoCapture.read()
+    ret, localFrame = threaded_camera.get_frame()
 
     if (ret):
         frame = localFrame.copy()
@@ -438,16 +468,11 @@ while True:
                 print("FPS: %d/%d" %(inputFrameCount, outputFrameCount))
                 inputFrameCount = 0
                 outputFrameCount = 0
-                    
 
         # Update Windows
         if (IsShowOriginal):
             frameWithCounts = AddIterationsPerSecText(frame.copy(), originalCps.countsPerSec())
             cv2.imshow("Original", frameWithCounts)
-        
-    elif not ret:
-        # If an error occurred, try initializing the video capture again
-        videoCapture = cv2.VideoCapture(videoSource)
 
     # Check for ESC key, if pressed shut everything down
     if (cv2.waitKey(1) == 27):
