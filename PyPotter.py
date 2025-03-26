@@ -226,10 +226,10 @@ def CheckForPattern(wandTracks, exampleFrame):
     prevTrack = wandTracks[0]
 
     for track in wandTracks:
-        x1 = prevTrack[0]
-        x2 = track[0]
-        y1 = prevTrack[1]
-        y2 = track[1]
+        x1 = int(prevTrack[0])
+        x2 = int(track[0])
+        y1 = int(prevTrack[1])
+        y2 = int(track[1])
 
         # Calculate the distance
         distance = math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
@@ -242,7 +242,7 @@ def CheckForPattern(wandTracks, exampleFrame):
     avgMostRecentDistances = mean(mostRecentDistances)
     sumDistances = sum(distances)
 
-    contours, hierarchy = cv2.findContours(wand_path_frame,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(wand_path_frame,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
     # Determine if wand stopped moving by looking at recent movement (avgMostRecentDistances), and check the length of distances to make sure the spell is reasonably long
     if (avgMostRecentDistances < SpellEndMovement and len(distances) > MinSpellLength):
@@ -450,7 +450,7 @@ while True:
         videoCapture = cv2.VideoCapture(videoSource)
 
     # Check for ESC key, if pressed shut everything down
-    if (cv2.waitKey(1) is 27):
+    if (cv2.waitKey(1) == 27):
         break
 
 # Shutdown PyPotter
